@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harvest Isle</title>
+</head>
+<body>
+<div id="loading"><div class="spinner"></div><div>Growing the island...</div></div>
+<div id="canvas-container"></div>
+<div id="vignette"></div>
+<div id="tooltip"></div>
+
+<div id="ui">
+  <div class="panel">
+    <div class="stats">
+      <span id="daynight-icon">🌅</span>
+      <span>Day <span id="day">1</span> · <span id="season">Spring</span></span>
+      <span class="divider"></span>
+      <span><span id="time">06:00</span> <span id="weather-icon">☀️</span></span>
+      <span class="divider"></span>
+      <span>💰 <span id="gold">0</span></span>
+      <span class="divider"></span>
+      <span class="energy">⚡<div id="energybar-wrap"><div id="energybar"></div></div></span>
+    </div>
+  </div>
+  <div id="right-col">
+    <div id="minimap-wrap" class="panel">
+      <canvas id="minimap" width="200" height="200"></canvas>
+    </div>
+  </div>
+</div>
+
+<div id="esc-menu">
+  <div id="esc-backdrop"></div>
+  <div class="esc-panel panel">
+    <h2>Menu</h2>
+    <p class="esc-hint">Press <kbd>Esc</kbd> to resume</p>
+    <div class="esc-actions">
+      <button class="menubtn" id="btn-save">💾 Save</button>
+      <button class="menubtn" id="btn-craft">🔨 Craft</button>
+      <button class="menubtn" id="btn-new">🆕 New Island</button>
+      <button class="menubtn menubtn-help" id="btn-help" aria-expanded="false" title="Controls">?</button>
+    </div>
+    <div id="help-panel" hidden>
+      <strong>Controls</strong><br>
+      <kbd>WASD</kbd> Move · <kbd>1–9</kbd> Tool<br>
+      <kbd>Click</kbd> Use / Chop / Mine<br>
+      <kbd>E</kbd> Harvest · <kbd>Space</kbd> Sleep<br>
+      <kbd>Esc</kbd> Menu<br>
+      <span class="help-note">Hoe any grass → raised flower bed · weather changes each day</span>
+    </div>
+    <button class="menubtn menubtn-resume" id="btn-resume">Resume</button>
+  </div>
+</div>
+
+<div id="craft-panel"><h3>Crafting</h3><div id="craft-list"></div></div>
+<div id="hotbar"></div>
+<div id="console-log"></div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

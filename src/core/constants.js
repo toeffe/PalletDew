@@ -1,0 +1,11 @@
+export const TILE = 3;
+export const RADIUS = 46;
+export const FARM_RADIUS = 14;
+export const HEIGHT_SCALE = 15;
+export const WATER_H = 0.32;
+export const BASE_LAND_H = 0.52;
+export const SEASONS = ['spring','summer','fall','winter'];
+export const SEASON_ICON = { spring:'🌸', summer:'☀️', fall:'🍂', winter:'❄️' };
+export const DAYS_PER_SEASON = 7;
+export const SAVE_KEY = 'harvest_isle_save_v5';
+export const FARM_Y = (BASE_LAND_H - WATER_H) * HEIGHT_SCALE;
