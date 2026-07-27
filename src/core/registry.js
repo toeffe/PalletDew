@@ -7,8 +7,18 @@ export class Registry {
 }
 
 export const ItemRegistry = new Registry();
-export function defineItem({ id, name, icon, maxStack=99, type='misc', tags=[], useAction=null }){
-  return ItemRegistry.register(id, { id, name, icon, maxStack, type, tags, useAction });
+export function defineItem({
+  id, name, icon, type='misc', tags=[], useAction=null,
+  size='small',
+  maxInventoryStack = size==='small' ? 99 : 1,
+  maxPalletStack = size==='small' ? 99 : (size==='medium' ? 20 : 4),
+  requiresPallet = size==='large',
+  canCarryByHand = size!=='small',
+}){
+  return ItemRegistry.register(id, {
+    id, name, icon, type, tags, useAction,
+    size, maxInventoryStack, maxPalletStack, requiresPallet, canCarryByHand,
+  });
 }
 
 export const ObjectRegistry = new Registry();

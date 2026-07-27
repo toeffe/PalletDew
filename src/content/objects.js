@@ -1,7 +1,10 @@
 import * as THREE from 'three';
 import { defineObject } from '../core/registry.js';
+import { CHEST_SLOTS, BATTERY_MAX_CHARGE, PANEL_OUTPUT_RATE } from '../core/constants.js';
 import { log } from '../core/state.js';
 import { addItem } from '../systems/inventory.js';
+import { registerNode, powerNodes } from '../systems/power.js';
+import { openChestPanel } from '../ui/transferPanel.js';
 
 function buildTreeMesh(){
   const g = new THREE.Group();
@@ -10,6 +13,41 @@ function buildTreeMesh(){
   const leaves = new THREE.Mesh(new THREE.DodecahedronGeometry(2.2), new THREE.MeshStandardMaterial({color:0x2d8a3e, flatShading:true, roughness:0.95}));
   leaves.position.y=4; g.add(leaves);
   return g;
+}
+
+function definePowerObject(kind, name, buildMesh, defaults={}){
+  defineObject({
+    id: kind, name, category: 'power', collision: true, buildMesh,
+    onPlace: (self) => {
+      if(kind === 'battery'){
+        self.mesh.traverse(c => {
+          if(c.userData?.isFill) self._fillMesh = c;
+        });
+      }
+      const node = registerNode(kind, self.position.x, self.position.z, {
+        entity: self,
+        id: defaults.id,
+        charge: defaults.charge ?? 0,
+        maxCharge: defaults.maxCharge,
+        outputRate: defaults.outputRate,
+      });
+      self.powerNodeId = node.id;
+      self.refreshChargeVisual = (ratio) => {
+        if(self._fillMesh){
+          self._fillMesh.scale.y = Math.max(0.05, ratio);
+          self._fillMesh.position.y = 0.15 + ratio * 0.6;
+        }
+      };
+      if(kind === 'battery') self.refreshChargeVisual(node.charge / Math.max(1, node.maxCharge));
+    },
+    onInteract: (self) => {
+      const n = powerNodes.get(self.powerNodeId);
+      if(!n) return;
+      if(n.kind === 'battery') log(`Battery: ${Math.floor(n.charge)}/${n.maxCharge}`);
+      else if(n.kind === 'solar_panel') log('Solar panel — producing when sunny.');
+      else if(n.kind === 'charge_dock') log('Charge dock — park Mulli here to charge.');
+    },
+  });
 }
 
 export function registerObjects(){
@@ -80,7 +118,13 @@ export function registerObjects(){
       lid.position.y=1.6; g.add(lid);
       return g;
     },
-    onInteract: () => log('Opened chest (storage UI not implemented yet).')
+    onPlace: (self) => {
+      if(!self.contents) self.contents = Array(CHEST_SLOTS).fill(null);
+    },
+    onInteract: (self) => {
+      if(!self.contents) self.contents = Array(CHEST_SLOTS).fill(null);
+      openChestPanel(self);
+    }
   });
   defineObject({
     id:'scarecrow', name:'Scarecrow', category:'decor', collision:false,
@@ -107,5 +151,39 @@ export function registerObjects(){
       light.position.y=5; g.add(light);
       return g;
     }
+  });
+
+  definePowerObject('solar_panel', 'Solar Panel', () => {
+    const g = new THREE.Group();
+    const stand = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.2, 0.3), new THREE.MeshStandardMaterial({ color: 0x555555, flatShading: true }));
+    stand.position.y = 0.6; g.add(stand);
+    const panel = new THREE.Mesh(
+      new THREE.BoxGeometry(2.4, 0.1, 1.6),
+      new THREE.MeshStandardMaterial({ color: 0x1a3a8a, emissive: 0x0a2040, emissiveIntensity: 0.5, flatShading: true })
+    );
+    panel.position.set(0, 1.4, 0);
+    panel.rotation.x = -0.4;
+    g.add(panel);
+    return g;
+  }, { outputRate: PANEL_OUTPUT_RATE });
+
+  definePowerObject('battery', 'Battery Bank', () => {
+    const g = new THREE.Group();
+    const caseMesh = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.4, 1.0), new THREE.MeshStandardMaterial({ color: 0x2d3436, flatShading: true }));
+    caseMesh.position.y = 0.7; g.add(caseMesh);
+    const fill = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.2, 0.7), new THREE.MeshStandardMaterial({ color: 0x27ae60, flatShading: true }));
+    fill.position.y = 0.7;
+    fill.userData.isFill = true;
+    g.add(fill);
+    return g;
+  }, { maxCharge: BATTERY_MAX_CHARGE, charge: 40 });
+
+  definePowerObject('charge_dock', 'Charge Dock', () => {
+    const g = new THREE.Group();
+    const pad = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 0.15, 16), new THREE.MeshStandardMaterial({ color: 0x34495e, flatShading: true }));
+    pad.position.y = 0.08; g.add(pad);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.08, 8, 24), new THREE.MeshStandardMaterial({ color: 0xf1c40f, emissive: 0xf1c40f, emissiveIntensity: 0.4 }));
+    ring.rotation.x = Math.PI/2; ring.position.y = 0.18; g.add(ring);
+    return g;
   });
 }

@@ -1,12 +1,17 @@
-import { SEASONS, DAYS_PER_SEASON } from './constants.js';
+import { SEASONS, DAYS_PER_SEASON, HOTBAR_SIZE, BACKPACK_SIZE } from './constants.js';
 
 export const GameState = {
   seed: Math.floor(Math.random()*1e9),
   day: 1, hour: 6, minute: 0, gold: 50,
   energy: 100, maxEnergy: 100,
   weather: 'clear',
-  inventory: [],
+  hotbar: Array(HOTBAR_SIZE).fill(null),
+  backpack: Array(BACKPACK_SIZE).fill(null),
   selectedSlot: 0,
+  carried: null, // { id, count } | null
+  invCursor: null, // held stack while inventory panel open
+  inventoryOpen: false,
+  connectHint: null,
 };
 
 export function currentSeason(){

@@ -6,9 +6,19 @@ I'd split development into **Foundation**, **Core Gameplay**, **World**, **Conte
 
 ## Phase 0 — Foundation (Current)
 
-**Goal:** Stable engine.
+**Goal:** Stable engine + signature logistics & solar power.
 
 **Architecture:** Vite + ES modules under `src/` (not a single HTML file). Local: `npm run dev`. Production: `npm run build` → static `dist/`, deployed to GitHub Pages via `.github/workflows/deploy-pages.yml` (`base: /PalletDew/`).
+
+### Signature systems (priority)
+
+* Item sizes (small / medium / large) with inventory + pallet stack caps
+* Hand-carry + ground items
+* Stack splitting UI
+* Chest storage UI
+* Pallet load/unload + hitch to Mulli
+* Solar power grid: panels, batteries, cables, charge docks
+* Mulli vehicle (battery-powered, dock charging)
 
 ### Polish Existing
 
@@ -23,15 +33,14 @@ I'd split development into **Foundation**, **Core Gameplay**, **World**, **Conte
 
 ### Finish
 
-* Inventory improvements
-* Stack splitting
+* Inventory improvements (slotted model — done with logistics)
 * Tool durability (optional)
 * Better crafting UI
 * Better hotbar interaction
 
 **Milestone**
 
-> Stable engine that rarely needs architectural changes.
+> Stable engine with playable pallet logistics and solar-powered Mulli.
 
 ---
 

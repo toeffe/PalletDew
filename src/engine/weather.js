@@ -10,6 +10,20 @@ export const WEATHER_ICONS = {
   clear:'☀️', cloudy:'⛅', rain:'🌧️', storm:'⛈️', fog:'🌫️', snow:'❄️'
 };
 
+export const WEATHER_SUN_MUL = {
+  clear: 1, cloudy: 0.55, rain: 0.35, storm: 0.18, fog: 0.4, snow: 0.5,
+};
+
+export function dayFactorAt(hour, minute){
+  const hourFloat = hour + minute / 60;
+  const elevation = Math.sin(((hourFloat - 6) / 12) * Math.PI);
+  return THREE.MathUtils.clamp((elevation + 0.2) / 1.2, 0, 1);
+}
+
+export function daylightSolarRate(hour, minute, weather){
+  return dayFactorAt(hour, minute) * (WEATHER_SUN_MUL[weather] ?? 1);
+}
+
 export const WeatherFX = {
   wind: 0.35,
   targetWind: 0.35,
@@ -40,17 +54,17 @@ scene.add(precip);
 export function updateSky(dt){
   const hourFloat = GameState.hour + GameState.minute/60;
   const elevation = Math.sin(((hourFloat-6)/12)*Math.PI);
-  const dayFactor = THREE.MathUtils.clamp((elevation+0.2)/1.2, 0, 1);
+  const dayFactor = dayFactorAt(GameState.hour, GameState.minute);
   const twilight = 1 - Math.min(1, Math.abs(elevation)/0.35);
   const angle = (hourFloat/24)*Math.PI*2 - Math.PI/2;
 
   const w = GameState.weather;
-  if(w === 'clear'){ WeatherFX.targetWind = 0.25; WeatherFX.targetFog = 0.0028; WeatherFX.targetSunMul = 1; WeatherFX.targetCloud = 0; }
-  else if(w === 'cloudy'){ WeatherFX.targetWind = 0.4; WeatherFX.targetFog = 0.004; WeatherFX.targetSunMul = 0.55; WeatherFX.targetCloud = 0.55; }
-  else if(w === 'rain'){ WeatherFX.targetWind = 0.7; WeatherFX.targetFog = 0.0055; WeatherFX.targetSunMul = 0.35; WeatherFX.targetCloud = 0.75; }
-  else if(w === 'storm'){ WeatherFX.targetWind = 1.15; WeatherFX.targetFog = 0.007; WeatherFX.targetSunMul = 0.18; WeatherFX.targetCloud = 0.9; }
-  else if(w === 'fog'){ WeatherFX.targetWind = 0.15; WeatherFX.targetFog = 0.018; WeatherFX.targetSunMul = 0.4; WeatherFX.targetCloud = 0.65; }
-  else if(w === 'snow'){ WeatherFX.targetWind = 0.5; WeatherFX.targetFog = 0.006; WeatherFX.targetSunMul = 0.5; WeatherFX.targetCloud = 0.7; }
+  if(w === 'clear'){ WeatherFX.targetWind = 0.25; WeatherFX.targetFog = 0.0028; WeatherFX.targetSunMul = WEATHER_SUN_MUL.clear; WeatherFX.targetCloud = 0; }
+  else if(w === 'cloudy'){ WeatherFX.targetWind = 0.4; WeatherFX.targetFog = 0.004; WeatherFX.targetSunMul = WEATHER_SUN_MUL.cloudy; WeatherFX.targetCloud = 0.55; }
+  else if(w === 'rain'){ WeatherFX.targetWind = 0.7; WeatherFX.targetFog = 0.0055; WeatherFX.targetSunMul = WEATHER_SUN_MUL.rain; WeatherFX.targetCloud = 0.75; }
+  else if(w === 'storm'){ WeatherFX.targetWind = 1.15; WeatherFX.targetFog = 0.007; WeatherFX.targetSunMul = WEATHER_SUN_MUL.storm; WeatherFX.targetCloud = 0.9; }
+  else if(w === 'fog'){ WeatherFX.targetWind = 0.15; WeatherFX.targetFog = 0.018; WeatherFX.targetSunMul = WEATHER_SUN_MUL.fog; WeatherFX.targetCloud = 0.65; }
+  else if(w === 'snow'){ WeatherFX.targetWind = 0.5; WeatherFX.targetFog = 0.006; WeatherFX.targetSunMul = WEATHER_SUN_MUL.snow; WeatherFX.targetCloud = 0.7; }
 
   const lerp = (a,b,t) => a + (b-a)*t;
   const t = Math.min(1, dt * 0.35);

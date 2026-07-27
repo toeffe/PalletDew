@@ -1,13 +1,14 @@
 import * as THREE from 'three';
-import { TILE, RADIUS, FARM_Y } from '../core/constants.js';
-import { scene, camera } from '../engine/renderer.js';
+import { TILE, FARM_Y } from '../core/constants.js';
+import { camera } from '../engine/renderer.js';
 import { terrainHeightWorld } from '../world/terrain.js';
 import { getFarmTile, bedGroundY, BED_DIRT_H } from '../world/farm.js';
-import { entities } from './WorldEntity.js';
-import { PlacedObject } from './PlacedObject.js';
 import { keys } from '../engine/keys.js';
 import { useEnergy } from '../systems/inventory.js';
 import { isMenuOpen } from '../ui/menu.js';
+import { isBlocked } from './collision.js';
+import { VehicleControl } from '../systems/vehicleControl.js';
+import { scene } from '../engine/renderer.js';
 
 const MOVE = {
   maxSpeed: 7.8,
@@ -103,17 +104,6 @@ const _moveRight = new THREE.Vector3();
 const _WORLD_UP = new THREE.Vector3(0, 1, 0);
 const _wish = new THREE.Vector3();
 
-function isBlocked(nx, nz){
-  if(Math.hypot(nx, nz) > (RADIUS - 2) * TILE) return true;
-  if(terrainHeightWorld(nx, nz) < -0.8) return true;
-  for(const e of entities){
-    if(e instanceof PlacedObject && e.def.collision && !e.dead){
-      if(Math.abs(nx - e.position.x) < 1.6 && Math.abs(nz - e.position.z) < 1.6) return true;
-    }
-  }
-  return false;
-}
-
 function approachVelocity(current, target, rate, dt){
   const diff = target - current;
   const maxDelta = rate * dt;
@@ -124,7 +114,7 @@ function approachVelocity(current, target, rate, dt){
 export function updatePlayer(dt){
   const d = playerModel.userData;
 
-  if(isMenuOpen()){
+  if(VehicleControl.suppressPlayerMove || isMenuOpen()){
     Player.vx = approachVelocity(Player.vx, 0, MOVE.decel, dt);
     Player.vz = approachVelocity(Player.vz, 0, MOVE.decel, dt);
     Player.moving = false;

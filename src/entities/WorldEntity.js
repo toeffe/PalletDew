@@ -11,7 +11,8 @@ export class WorldEntity {
   destroy(){
     this.dead = true;
     if(this.mesh){
-      scene.remove(this.mesh);
+      if(this.mesh.parent) this.mesh.parent.remove(this.mesh);
+      else scene.remove(this.mesh);
       this.mesh.traverse(c=>{ if(c.geometry) c.geometry.dispose(); if(c.material) c.material.dispose(); });
     }
   }
