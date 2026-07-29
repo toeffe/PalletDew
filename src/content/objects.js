@@ -32,13 +32,23 @@ function definePowerObject(kind, name, buildMesh, defaults={}){
         outputRate: defaults.outputRate,
       });
       self.powerNodeId = node.id;
+
+      // Universal refreshChargeVisual for all power objects
       self.refreshChargeVisual = (ratio) => {
         if(self._fillMesh){
           self._fillMesh.scale.y = Math.max(0.05, ratio);
           self._fillMesh.position.y = 0.15 + ratio * 0.6;
         }
+        // Solar panel: update the world-space charge indicator
+        if(self._chargeIndicator){
+          const mat = self._chargeIndicator.material;
+          mat.emissiveIntensity = 0.2 + ratio * 1.2;
+          mat.color.setHex(ratio > 0.01 ? 0x2ecc71 : 0x555555);
+        }
       };
+
       if(kind === 'battery') self.refreshChargeVisual(node.charge / Math.max(1, node.maxCharge));
+      if(kind === 'solar_panel') self.refreshChargeVisual(0);
     },
     onInteract: (self) => {
       const n = powerNodes.get(self.powerNodeId);
@@ -164,6 +174,16 @@ export function registerObjects(){
     panel.position.set(0, 1.4, 0);
     panel.rotation.x = -0.4;
     g.add(panel);
+
+    // World-space charge indicator above panel
+    const indGeo = new THREE.BoxGeometry(0.6, 0.08, 0.08);
+    const indMat = new THREE.MeshStandardMaterial({ color: 0x555555, emissive: 0x2ecc71, emissiveIntensity: 0.2, flatShading: true });
+    const indicator = new THREE.Mesh(indGeo, indMat);
+    indicator.position.set(0, 2.1, 0);
+    indicator.userData.isChargeIndicator = true;
+    g.add(indicator);
+    g.userData.chargeIndicator = indicator;
+
     return g;
   }, { outputRate: PANEL_OUTPUT_RATE });
 
@@ -180,10 +200,22 @@ export function registerObjects(){
 
   definePowerObject('charge_dock', 'Charge Dock', () => {
     const g = new THREE.Group();
+    // Raised platform base
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(2.0, 2.2, 0.25, 16), new THREE.MeshStandardMaterial({ color: 0x2c3e50, flatShading: true }));
+    base.position.y = 0.12; g.add(base);
+    // Top pad
     const pad = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 0.15, 16), new THREE.MeshStandardMaterial({ color: 0x34495e, flatShading: true }));
-    pad.position.y = 0.08; g.add(pad);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.08, 8, 24), new THREE.MeshStandardMaterial({ color: 0xf1c40f, emissive: 0xf1c40f, emissiveIntensity: 0.4 }));
-    ring.rotation.x = Math.PI/2; ring.position.y = 0.18; g.add(ring);
+    pad.position.y = 0.32; g.add(pad);
+    // Glowing ring
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.08, 8, 24), new THREE.MeshStandardMaterial({ color: 0xf1c40f, emissive: 0xf1c40f, emissiveIntensity: 0.6 }));
+    ring.rotation.x = Math.PI/2; ring.position.y = 0.42; g.add(ring);
+    // Corner posts with lights
+    for(const [x, z] of [[-1.4, -1.4], [1.4, -1.4], [-1.4, 1.4], [1.4, 1.4]]){
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.5), new THREE.MeshStandardMaterial({ color: 0x7f8c8d, flatShading: true }));
+      post.position.set(x, 0.45, z); g.add(post);
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.1), new THREE.MeshStandardMaterial({ color: 0x2ecc71, emissive: 0x2ecc71, emissiveIntensity: 0.8 }));
+      bulb.position.set(x, 0.72, z); g.add(bulb);
+    }
     return g;
   });
 }

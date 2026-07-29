@@ -144,6 +144,14 @@ export class MulliEntity extends WorldEntity {
     const trickle = MULLI_TRICKLE_PER_SEC * dayFactorAt(GameState.hour, GameState.minute) * dt;
     if(trickle > 0) this.charge = Math.min(this.maxCharge, this.charge + trickle);
 
+    // Update world-space charge bar
+    if(this._chargeBar){
+      const ratio = this.charge / this.maxCharge;
+      this._chargeBar.scale.x = Math.max(0.02, ratio);
+      this._chargeBar.position.x = -0.5 + ratio * 0.5;
+      this._chargeBar.material.color.setHex(ratio > 0.3 ? 0x2ecc71 : (ratio > 0.1 ? 0xf1c40f : 0xe74c3c));
+    }
+
     if(!this.mounted){
       this.vx = approachVelocity(this.vx, 0, MOVE.decel, dt);
       this.vz = approachVelocity(this.vz, 0, MOVE.decel, dt);
@@ -236,12 +244,29 @@ function buildMulliMesh(){
   const hitch = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.2, 0.6), dark);
   hitch.position.set(0, 0.5, -1.9);
   g.add(hitch);
+
+  // World-space charge bar above Mulli
+  const barGroup = new THREE.Group();
+  barGroup.position.set(0, 3.0, 0);
+  // Background
+  const bg = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.12, 0.12), new THREE.MeshStandardMaterial({ color: 0x222222, flatShading: true }));
+  barGroup.add(bg);
+  // Fill
+  const fill = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.08, 0.08), new THREE.MeshStandardMaterial({ color: 0x2ecc71, flatShading: true }));
+  fill.position.set(0, 0, 0.02);
+  barGroup.add(fill);
+
+  g.add(barGroup);
+  g.userData.chargeBar = fill;
+
   return g;
 }
 
 export function spawnMulli(wx, wz, opts={}){
   if(Mulli && !Mulli.dead) Mulli.destroy();
   Mulli = new MulliEntity(wx, wz, opts);
+  // Bind charge bar reference
+  Mulli._chargeBar = Mulli.mesh.userData.chargeBar;
   spawnEntity(Mulli);
   return Mulli;
 }

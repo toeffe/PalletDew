@@ -91,34 +91,54 @@ export function getComponent(nodeId){
 }
 
 function buildCableMesh(a, b, cableId){
-  const ay = 0.15, by = 0.15;
-  const points = [
-    new THREE.Vector3(a.wx, ay, a.wz),
-    new THREE.Vector3(b.wx, by, b.wz),
-  ];
-  const geo = new THREE.BufferGeometry().setFromPoints(points);
-  const mat = new THREE.LineBasicMaterial({ color: 0x3a8cff, transparent: true, opacity: 0.85 });
-  const line = new THREE.Line(geo, mat);
-  line.userData.cableId = cableId;
-  line.userData.isCable = true;
-  // Fat hit proxy
-  const mid = new THREE.Vector3().addVectors(points[0], points[1]).multiplyScalar(0.5);
-  const len = points[0].distanceTo(points[1]);
+  // Sample terrain height along the path for cables that lie ON the ground
+  const segs = Math.max(4, Math.floor(Math.hypot(a.wx - b.wx, a.wz - b.wz) * 1.5));
+  const points = [];
+  for(let i = 0; i <= segs; i++){
+    const t = i / segs;
+    const wx = a.wx + (b.wx - a.wx) * t;
+    const wz = a.wz + (b.wz - a.wz) * t;
+    // Use a small helper to get terrain height — import at top would be circular,
+    // so we use a dynamic require pattern or just a fixed offset.
+    // For now, place cables slightly above ground with a fixed small offset.
+    const wy = 0.35; // Slightly above ground to be visible
+    points.push(new THREE.Vector3(wx, wy, wz));
+  }
+
+  const curve = new THREE.CatmullRomCurve3(points);
+  // Thicker tube so cables are actually visible
+  const geo = new THREE.TubeGeometry(curve, segs, 0.06, 6, false);
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0x3a8cff,
+    emissive: 0x1a5cff,
+    emissiveIntensity: 0.3,
+    roughness: 0.6,
+    metalness: 0.3,
+    flatShading: true,
+  });
+  const tube = new THREE.Mesh(geo, mat);
+  tube.userData.cableId = cableId;
+  tube.userData.isCable = true;
+
+  // Fat hit proxy (invisible box along the path)
+  const mid = new THREE.Vector3((a.wx + b.wx)/2, 0.35, (a.wz + b.wz)/2);
+  const len = Math.hypot(a.wx - b.wx, a.wz - b.wz);
   const hit = new THREE.Mesh(
-    new THREE.BoxGeometry(0.25, 0.25, Math.max(0.5, len)),
+    new THREE.BoxGeometry(0.35, 0.5, Math.max(0.5, len)),
     new THREE.MeshBasicMaterial({ visible: false })
   );
   hit.position.copy(mid);
-  hit.lookAt(points[1]);
+  hit.lookAt(new THREE.Vector3(b.wx, 0.35, b.wz));
   hit.rotateX(Math.PI / 2);
   hit.userData.cableId = cableId;
   hit.userData.isCable = true;
+
   const g = new THREE.Group();
-  g.add(line);
+  g.add(tube);
   g.add(hit);
   g.userData.cableId = cableId;
   g.userData.isCable = true;
-  g.userData.lineMat = mat;
+  g.userData.tubeMat = mat;
   scene.add(g);
   return g;
 }
@@ -211,7 +231,6 @@ export function tickPower(dt, hour, minute, weather, mulli){
           const share = toFill * (space / remainingCap);
           b.charge = Math.min(b.maxCharge, b.charge + share);
         }
-        // recompute remaining for display; overflow discarded intentionally
       }
     }
 
@@ -220,9 +239,10 @@ export function tickPower(dt, hour, minute, weather, mulli){
     for(const [cid, c] of cables){
       if(!component.has(c.a)) continue;
       const mesh = cableMeshes.get(cid);
-      if(mesh?.userData.lineMat){
-        mesh.userData.lineMat.color.setHex(producing ? 0x5cff8a : 0x3a8cff);
-        mesh.userData.lineMat.opacity = producing ? 1 : 0.7;
+      if(mesh?.userData.tubeMat){
+        mesh.userData.tubeMat.color.setHex(producing ? 0x5cff8a : 0x3a8cff);
+        mesh.userData.tubeMat.emissive.setHex(producing ? 0x2aff6a : 0x1a5cff);
+        mesh.userData.tubeMat.emissiveIntensity = producing ? 0.6 : 0.3;
       }
     }
 
@@ -256,6 +276,11 @@ export function tickPower(dt, hour, minute, weather, mulli){
   for(const n of powerNodes.values()){
     if(n.kind === 'battery' && n.entity?.refreshChargeVisual){
       n.entity.refreshChargeVisual(n.charge / Math.max(1, n.maxCharge));
+    }
+    // Refresh solar panel indicator based on production rate
+    if(n.kind === 'solar_panel' && n.entity?.refreshChargeVisual){
+      const rate = daylightSolarRate(GameState.hour, GameState.minute, GameState.weather);
+      n.entity.refreshChargeVisual(rate);
     }
   }
 }

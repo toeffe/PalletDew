@@ -222,6 +222,41 @@ export function updateRaycast(){
   hoveredFarmTile = null;
   highlightMesh.visible = false;
   document.getElementById('tooltip').style.display = 'none';
+
+  // FIRST: check for entity hover — this takes priority over terrain
+  const entHit = raycastEntity();
+  if(entHit?.entity){
+    const ent = entHit.entity;
+    const tt = document.getElementById('tooltip');
+    let txt = '';
+    if(ent.def?.name){
+      txt = `<b>${ent.def.name}</b>`;
+      if(ent.def.category) txt += ` <span style="opacity:0.7">(${ent.def.category})</span>`;
+    } else if(ent instanceof Mulli?.constructor) {
+      txt = `<b>Mulli</b> <span style="opacity:0.7">(vehicle)</span>`;
+    } else {
+      txt = `<b>Object</b>`;
+    }
+    // Show interaction hint
+    const dist = Math.hypot((ent.x ?? ent.position.x) - Player.x, (ent.z ?? ent.position.z) - Player.z);
+    if(dist < TILE * 4){
+      txt += `<br/><span style="opacity:0.7;font-size:12px">Click to interact</span>`;
+    }
+    tt.innerHTML = txt;
+    tt.style.display = 'block';
+    tt.style.left = (window.innerWidth/2 + mouse.x*window.innerWidth/2 + 15)+'px';
+    tt.style.top = (window.innerHeight/2 - mouse.y*window.innerHeight/2 - 10)+'px';
+    return;
+  }
+  if(entHit?.cableId){
+    const tt = document.getElementById('tooltip');
+    tt.innerHTML = `<b>Cable</b><br/><span style="opacity:0.7;font-size:12px">Click to remove</span>`;
+    tt.style.display = 'block';
+    tt.style.left = (window.innerWidth/2 + mouse.x*window.innerWidth/2 + 15)+'px';
+    tt.style.top = (window.innerHeight/2 - mouse.y*window.innerHeight/2 - 10)+'px';
+    return;
+  }
+
   if(!terrainData) return;
   const hits = raycaster.intersectObject(terrainData.mesh);
   if(hits.length === 0) return;
@@ -236,13 +271,13 @@ export function updateRaycast(){
   highlightMesh.position.set(tile.wx, wy, tile.wz);
   highlightMesh.visible = true;
   const tt = document.getElementById('tooltip');
-  let txt = `<strong>${tile.type.toUpperCase()}</strong>`;
-  if(tile.tilled) txt += '<br>🌱 Flower bed';
+  let txt = `<b>${tile.type.toUpperCase()}</b>`;
+  if(tile.tilled) txt += '<br/>🌱 Flower bed';
   if(tile.watered) txt += ' 💧 Wet';
-  if(tile.crop) txt += `<br>🌿 ${tile.crop.def.name} (${tile.crop.stage}/${tile.crop.def.stages})`;
-  if(tile.object) txt += `<br>📦 ${tile.object.def.name}`;
-  if(!tile.tilled && !canPlaceBed(tile)) txt += '<br><span style="color:#e88">✗ Too close to water or blocked</span>';
-  if(GameState.connectHint) txt += `<br><span style="color:#8cf">${GameState.connectHint}</span>`;
+  if(tile.crop) txt += `<br/>🌿 ${tile.crop.def.name} (${tile.crop.stage}/${tile.crop.def.stages})`;
+  if(tile.object) txt += `<br/>📦 ${tile.object.def.name}`;
+  if(!tile.tilled && !canPlaceBed(tile)) txt += '<br/>✗ Too close to water or blocked';
+  if(GameState.connectHint) txt += `<br/>${GameState.connectHint}`;
   tt.innerHTML = txt; tt.style.display = 'block';
   tt.style.left = (window.innerWidth/2 + mouse.x*window.innerWidth/2 + 15)+'px';
   tt.style.top = (window.innerHeight/2 - mouse.y*window.innerHeight/2 - 10)+'px';

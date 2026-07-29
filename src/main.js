@@ -143,6 +143,10 @@ function applySave(data){
           entity.mesh.traverse(c => { if(c.userData?.isFill) entity._fillMesh = c; });
           entity.refreshChargeVisual(n.charge / BATTERY_MAX_CHARGE);
         }
+        if(n.kind === 'solar_panel'){
+          entity.mesh.traverse(c => { if(c.userData?.isChargeIndicator) entity._chargeIndicator = c; });
+          entity.refreshChargeVisual(0);
+        }
       }
     }
     for(const c of data.cables || []){
