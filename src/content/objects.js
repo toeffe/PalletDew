@@ -15,9 +15,9 @@ function buildTreeMesh(){
   return g;
 }
 
-function definePowerObject(kind, name, buildMesh, defaults={}){
+function definePowerObject(kind, name, buildMesh, defaults={}, collision=true){
   defineObject({
-    id: kind, name, category: 'power', collision: true, buildMesh,
+    id: kind, name, category: 'power', collision, buildMesh,
     onPlace: (self) => {
       if(kind === 'battery'){
         self.mesh.traverse(c => {
@@ -33,17 +33,19 @@ function definePowerObject(kind, name, buildMesh, defaults={}){
       });
       self.powerNodeId = node.id;
 
-      // Universal refreshChargeVisual for all power objects
       self.refreshChargeVisual = (ratio) => {
         if(self._fillMesh){
           self._fillMesh.scale.y = Math.max(0.05, ratio);
           self._fillMesh.position.y = 0.15 + ratio * 0.6;
         }
-        // Solar panel: update the world-space charge indicator
         if(self._chargeIndicator){
           const mat = self._chargeIndicator.material;
-          mat.emissiveIntensity = 0.2 + ratio * 1.2;
-          mat.color.setHex(ratio > 0.01 ? 0x2ecc71 : 0x555555);
+          mat.emissiveIntensity = 0.4 + ratio * 2.0;
+          mat.color.setHex(ratio > 0.01 ? 0x00ff44 : 0x333333);
+          // Also update the glow light
+          if(self._chargeLight){
+            self._chargeLight.intensity = ratio * 2.0;
+          }
         }
       };
 
@@ -175,14 +177,24 @@ export function registerObjects(){
     panel.rotation.x = -0.4;
     g.add(panel);
 
-    // World-space charge indicator above panel
-    const indGeo = new THREE.BoxGeometry(0.6, 0.08, 0.08);
-    const indMat = new THREE.MeshStandardMaterial({ color: 0x555555, emissive: 0x2ecc71, emissiveIntensity: 0.2, flatShading: true });
+    // BIG bright charge indicator — vertical glowing strip
+    const indGeo = new THREE.BoxGeometry(0.15, 0.6, 0.15);
+    const indMat = new THREE.MeshStandardMaterial({
+      color: 0x333333,
+      emissive: 0x00ff44,
+      emissiveIntensity: 0.4,
+      flatShading: true
+    });
     const indicator = new THREE.Mesh(indGeo, indMat);
-    indicator.position.set(0, 2.1, 0);
+    indicator.position.set(1.35, 1.4, 0);
     indicator.userData.isChargeIndicator = true;
     g.add(indicator);
-    g.userData.chargeIndicator = indicator;
+
+    // Glow light
+    const glow = new THREE.PointLight(0x00ff44, 0, 3);
+    glow.position.set(1.35, 1.4, 0);
+    g.add(glow);
+    g.userData.chargeLight = glow;
 
     return g;
   }, { outputRate: PANEL_OUTPUT_RATE });
@@ -198,24 +210,40 @@ export function registerObjects(){
     return g;
   }, { maxCharge: BATTERY_MAX_CHARGE, charge: 40 });
 
+  // Charge dock — NO collision so Mulli can drive onto it
   definePowerObject('charge_dock', 'Charge Dock', () => {
     const g = new THREE.Group();
-    // Raised platform base
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(2.0, 2.2, 0.25, 16), new THREE.MeshStandardMaterial({ color: 0x2c3e50, flatShading: true }));
-    base.position.y = 0.12; g.add(base);
-    // Top pad
-    const pad = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 0.15, 16), new THREE.MeshStandardMaterial({ color: 0x34495e, flatShading: true }));
-    pad.position.y = 0.32; g.add(pad);
-    // Glowing ring
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.08, 8, 24), new THREE.MeshStandardMaterial({ color: 0xf1c40f, emissive: 0xf1c40f, emissiveIntensity: 0.6 }));
-    ring.rotation.x = Math.PI/2; ring.position.y = 0.42; g.add(ring);
-    // Corner posts with lights
-    for(const [x, z] of [[-1.4, -1.4], [1.4, -1.4], [-1.4, 1.4], [1.4, 1.4]]){
-      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.5), new THREE.MeshStandardMaterial({ color: 0x7f8c8d, flatShading: true }));
-      post.position.set(x, 0.45, z); g.add(post);
-      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.1), new THREE.MeshStandardMaterial({ color: 0x2ecc71, emissive: 0x2ecc71, emissiveIntensity: 0.8 }));
-      bulb.position.set(x, 0.72, z); g.add(bulb);
+    // Raised platform base — low enough to drive onto
+    const base = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.0, 2.2, 0.18, 16),
+      new THREE.MeshStandardMaterial({ color: 0x2c3e50, flatShading: true })
+    );
+    base.position.y = 0.09; g.add(base);
+    // Top pad with checker pattern feel
+    const pad = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.8, 1.8, 0.08, 16),
+      new THREE.MeshStandardMaterial({ color: 0x34495e, flatShading: true, roughness: 0.4, metalness: 0.3 })
+    );
+    pad.position.y = 0.22; g.add(pad);
+    // Bright ring
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(1.5, 0.1, 8, 24),
+      new THREE.MeshStandardMaterial({ color: 0xf1c40f, emissive: 0xf1c40f, emissiveIntensity: 0.8 })
+    );
+    ring.rotation.x = Math.PI/2; ring.position.y = 0.28; g.add(ring);
+    // Corner posts (thin, don't block)
+    for(const [x, z] of [[-1.5, -1.5], [1.5, -1.5], [-1.5, 1.5], [1.5, 1.5]]){
+      const post = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.04, 0.04, 0.35),
+        new THREE.MeshStandardMaterial({ color: 0x7f8c8d, flatShading: true })
+      );
+      post.position.set(x, 0.35, z); g.add(post);
+      const bulb = new THREE.Mesh(
+        new THREE.SphereGeometry(0.08),
+        new THREE.MeshStandardMaterial({ color: 0x2ecc71, emissive: 0x2ecc71, emissiveIntensity: 1.0 })
+      );
+      bulb.position.set(x, 0.55, z); g.add(bulb);
     }
     return g;
-  });
+  }, {}, false); // collision = false
 }

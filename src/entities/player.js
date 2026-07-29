@@ -119,10 +119,19 @@ export function updatePlayer(dt){
     Player.vz = approachVelocity(Player.vz, 0, MOVE.decel, dt);
     Player.moving = false;
     Player.animWeight = expDamp(Player.animWeight, 0, MOVE.animBlend, dt);
-    d.leftLeg.rotation.x = expDamp(d.leftLeg.rotation.x, 0, 14, dt);
-    d.rightLeg.rotation.x = expDamp(d.rightLeg.rotation.x, 0, 14, dt);
-    d.leftArm.rotation.x = expDamp(d.leftArm.rotation.x, 0, 14, dt);
-    d.rightArm.rotation.x = expDamp(d.rightArm.rotation.x, 0, 14, dt);
+
+    if(VehicleControl.suppressPlayerMove){
+      // Arms forward gripping handlebar, legs still
+      d.leftArm.rotation.x = expDamp(d.leftArm.rotation.x, -0.85, 14, dt);
+      d.rightArm.rotation.x = expDamp(d.rightArm.rotation.x, -0.85, 14, dt);
+      d.leftLeg.rotation.x = expDamp(d.leftLeg.rotation.x, 0, 14, dt);
+      d.rightLeg.rotation.x = expDamp(d.rightLeg.rotation.x, 0, 14, dt);
+    } else {
+      d.leftLeg.rotation.x = expDamp(d.leftLeg.rotation.x, 0, 14, dt);
+      d.rightLeg.rotation.x = expDamp(d.rightLeg.rotation.x, 0, 14, dt);
+      d.leftArm.rotation.x = expDamp(d.leftArm.rotation.x, 0, 14, dt);
+      d.rightArm.rotation.x = expDamp(d.rightArm.rotation.x, 0, 14, dt);
+    }
     return;
   }
 

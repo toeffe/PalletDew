@@ -145,6 +145,7 @@ function applySave(data){
         }
         if(n.kind === 'solar_panel'){
           entity.mesh.traverse(c => { if(c.userData?.isChargeIndicator) entity._chargeIndicator = c; });
+          entity.mesh.traverse(c => { if(c.userData?.isChargeLight) entity._chargeLight = c; });
           entity.refreshChargeVisual(0);
         }
       }

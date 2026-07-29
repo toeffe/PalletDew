@@ -108,19 +108,12 @@ export function initInput(){
         updateUI();
       }
     }
-    if(e.key.toLowerCase()==='e') tryHarvest();
-    if(e.key===' '){ e.preventDefault(); sleep(); }
-    if(e.key.toLowerCase()==='g'){
-      if(dropOrPlacePallet()) return;
-      if(GameState.carried){
-        const dist = 1.5;
-        const wx = Player.x + Math.sin(Player.facing) * dist;
-        const wz = Player.z + Math.cos(Player.facing) * dist;
-        dropCarriedAt(wx, wz);
-        log('Dropped item.');
-      }
+    if(e.key.toLowerCase()==='e'){
+      if(Mulli?.mounted) Mulli.tryTogglePallet();
+      else tryHarvest();
     }
-  });
+    }
+  );
   document.addEventListener('keyup', e => {
     if(e.key === 'Escape') return;
     keys[e.key.toLowerCase()] = false;

@@ -14,7 +14,7 @@ export const cables = new Map();
 let nextNodeId = 1;
 let nextCableId = 1;
 
-const cableMeshes = new Map(); // cableId -> mesh
+const cableMeshes = new Map();
 
 export function clearPowerGraph(){
   for(const mesh of cableMeshes.values()){
@@ -91,56 +91,51 @@ export function getComponent(nodeId){
 }
 
 function buildCableMesh(a, b, cableId){
-  // Sample terrain height along the path for cables that lie ON the ground
-  const segs = Math.max(4, Math.floor(Math.hypot(a.wx - b.wx, a.wz - b.wz) * 1.5));
+  const segs = Math.max(6, Math.floor(Math.hypot(a.wx - b.wx, a.wz - b.wz) * 2));
   const points = [];
   for(let i = 0; i <= segs; i++){
     const t = i / segs;
     const wx = a.wx + (b.wx - a.wx) * t;
     const wz = a.wz + (b.wz - a.wz) * t;
-    // Use a small helper to get terrain height — import at top would be circular,
-    // so we use a dynamic require pattern or just a fixed offset.
-    // For now, place cables slightly above ground with a fixed small offset.
-    const wy = 0.35; // Slightly above ground to be visible
+    const wy = 0.32; // Just above ground
     points.push(new THREE.Vector3(wx, wy, wz));
   }
 
   const curve = new THREE.CatmullRomCurve3(points);
-  // Thicker tube so cables are actually visible
-  const geo = new THREE.TubeGeometry(curve, segs, 0.06, 6, false);
+  const geo = new THREE.TubeGeometry(curve, segs, 0.07, 8, false);
   const mat = new THREE.MeshStandardMaterial({
     color: 0x3a8cff,
     emissive: 0x1a5cff,
-    emissiveIntensity: 0.3,
-    roughness: 0.6,
-    metalness: 0.3,
+    emissiveIntensity: 0.4,
+    roughness: 0.5,
+    metalness: 0.4,
     flatShading: true,
   });
   const tube = new THREE.Mesh(geo, mat);
   tube.userData.cableId = cableId;
   tube.userData.isCable = true;
 
-  // Fat hit proxy (invisible box along the path)
-  const mid = new THREE.Vector3((a.wx + b.wx)/2, 0.35, (a.wz + b.wz)/2);
+  // Hit proxy
+  const mid = new THREE.Vector3((a.wx + b.wx)/2, 0.32, (a.wz + b.wz)/2);
   const len = Math.hypot(a.wx - b.wx, a.wz - b.wz);
   const hit = new THREE.Mesh(
-    new THREE.BoxGeometry(0.35, 0.5, Math.max(0.5, len)),
+    new THREE.BoxGeometry(0.4, 0.5, Math.max(0.6, len)),
     new THREE.MeshBasicMaterial({ visible: false })
   );
   hit.position.copy(mid);
-  hit.lookAt(new THREE.Vector3(b.wx, 0.35, b.wz));
+  hit.lookAt(new THREE.Vector3(b.wx, 0.32, b.wz));
   hit.rotateX(Math.PI / 2);
   hit.userData.cableId = cableId;
   hit.userData.isCable = true;
 
-  const g = new THREE.Group();
-  g.add(tube);
-  g.add(hit);
-  g.userData.cableId = cableId;
-  g.userData.isCable = true;
-  g.userData.tubeMat = mat;
-  scene.add(g);
-  return g;
+  const group = new THREE.Group();
+  group.add(tube);
+  group.add(hit);
+  group.userData.cableId = cableId;
+  group.userData.isCable = true;
+  group.userData.tubeMat = mat;
+  scene.add(group);
+  return group;
 }
 
 export function connectNodes(aId, bId){
@@ -202,7 +197,6 @@ export function restoreCable(id, aId, bId){
   if(m) nextCableId = Math.max(nextCableId, parseInt(m[1],10) + 1);
 }
 
-/** @param {import('../entities/Mulli.js').MulliEntity|null} mulli */
 export function tickPower(dt, hour, minute, weather, mulli){
   const rate = daylightSolarRate(hour, minute, weather);
   const visited = new Set();
@@ -220,7 +214,6 @@ export function tickPower(dt, hour, minute, weather, mulli){
     let production = 0;
     for(const p of panels) production += p.outputRate * rate * dt;
 
-    // Proportional fill by remaining capacity
     if(production > 0 && batteries.length){
       let remainingCap = batteries.reduce((s,b) => s + Math.max(0, b.maxCharge - b.charge), 0);
       if(remainingCap > 0){
@@ -234,7 +227,6 @@ export function tickPower(dt, hour, minute, weather, mulli){
       }
     }
 
-    // Update cable glow for this component
     const producing = production > 0.001;
     for(const [cid, c] of cables){
       if(!component.has(c.a)) continue;
@@ -242,12 +234,11 @@ export function tickPower(dt, hour, minute, weather, mulli){
       if(mesh?.userData.tubeMat){
         mesh.userData.tubeMat.color.setHex(producing ? 0x5cff8a : 0x3a8cff);
         mesh.userData.tubeMat.emissive.setHex(producing ? 0x2aff6a : 0x1a5cff);
-        mesh.userData.tubeMat.emissiveIntensity = producing ? 0.6 : 0.3;
+        mesh.userData.tubeMat.emissiveIntensity = producing ? 0.8 : 0.4;
       }
     }
 
-    // Dock → Mulli charge when parked
-    if(!mulli || mulli.mounted) continue;
+    if(!mulli) continue;
     const speed = Math.hypot(mulli.vx || 0, mulli.vz || 0);
     if(speed > 0.15) continue;
     if(mulli.charge >= mulli.maxCharge) continue;
@@ -260,7 +251,6 @@ export function tickPower(dt, hour, minute, weather, mulli){
       const need = Math.min(MULLI_DOCK_CHARGE_PER_SEC * dt, mulli.maxCharge - mulli.charge);
       const take = Math.min(need, avail);
       if(take <= 0) continue;
-      // proportional pull by charge
       for(const b of batteries){
         if(avail <= 0) break;
         const share = take * (b.charge / avail);
@@ -272,25 +262,16 @@ export function tickPower(dt, hour, minute, weather, mulli){
     }
   }
 
-  // Refresh battery mesh fill indicators
   for(const n of powerNodes.values()){
     if(n.kind === 'battery' && n.entity?.refreshChargeVisual){
       n.entity.refreshChargeVisual(n.charge / Math.max(1, n.maxCharge));
     }
-    // Refresh solar panel indicator based on production rate
     if(n.kind === 'solar_panel' && n.entity?.refreshChargeVisual){
-      const rate = daylightSolarRate(GameState.hour, GameState.minute, GameState.weather);
       n.entity.refreshChargeVisual(rate);
     }
   }
 }
 
-/**
- * Snapshot of the whole power grid for HUD display.
- * @param {number} hour
- * @param {number} minute
- * @param {string} weather
- */
 export function getPowerSummary(hour, minute, weather){
   const rate = daylightSolarRate(hour, minute, weather);
   let panels = 0, batteries = 0, docks = 0;

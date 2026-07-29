@@ -8,6 +8,8 @@ export function isBlocked(nx, nz){
   if(terrainHeightWorld(nx, nz) < -0.8) return true;
   for(const e of entities){
     if(e instanceof PlacedObject && e.def?.collision && !e.dead){
+      // Charge dock is a platform — don't block movement
+      if(e.def?.id === 'charge_dock') continue;
       if(Math.abs(nx - e.position.x) < 1.6 && Math.abs(nz - e.position.z) < 1.6) return true;
     }
   }

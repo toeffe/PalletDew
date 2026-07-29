@@ -79,11 +79,12 @@ export class Pallet extends WorldEntity {
   }
 
   interact(){
+    // If attached to Mulli, just show info — dropping is done via E on the Mulli
     if(this.attachedToMulli){
-      if(GameState.carried){ log('Hands must be empty to unhitch.'); return; }
-      VehicleControl.unhitchPallet?.();
+      log('Pallet is being towed. Press E on the Mulli to drop it.');
       return;
     }
+
     if(GameState.carried){
       const { id, count } = GameState.carried;
       const added = this.load(id, count);
@@ -97,6 +98,7 @@ export class Pallet extends WorldEntity {
       log('Pallet cannot hold that.');
       return;
     }
+
     openTransferPanel({
       title: 'Pallet',
       slots: this.contents,
@@ -118,9 +120,9 @@ export class Pallet extends WorldEntity {
         new THREE.BoxGeometry(0.55, 0.4 + Math.min(0.8, slot.count * 0.05), 0.55),
         new THREE.MeshStandardMaterial({ color: 0xb87333, flatShading: true })
       );
-      const row = i % 4;
-      const col = Math.floor(i / 4);
-      box.position.set(-0.9 + row * 0.6, 0.35 + box.geometry.parameters.height/2, -0.3 + col * 0.6);
+      const row = i % 2;
+      const col = Math.floor(i / 2);
+      box.position.set(-0.3 + row * 0.6, 0.35 + box.geometry.parameters.height/2, -0.9 + col * 0.6);
       this.cargoGroup.add(box);
       i++;
     }
@@ -136,14 +138,30 @@ export class Pallet extends WorldEntity {
 function buildPalletMesh(){
   const g = new THREE.Group();
   const wood = new THREE.MeshStandardMaterial({ color: 0x8b6914, flatShading: true, roughness: 0.9 });
-  const deck = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.12, 2.0), wood);
+  const darkWood = new THREE.MeshStandardMaterial({ color: 0x6b4a0a, flatShading: true, roughness: 0.9 });
+
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.12, 2.4), wood);
   deck.position.y = 0.2;
   g.add(deck);
+
+  for(let i = 0; i < 5; i++){
+    const board = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.05, 0.24), wood);
+    board.position.set(0, 0.29, -0.96 + i * 0.48);
+    g.add(board);
+  }
+
   for(let i = -1; i <= 1; i++){
-    const runner = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.18, 0.2), wood);
-    runner.position.set(0, 0.09, i * 0.7);
+    const runner = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.18, 2.4), darkWood);
+    runner.position.set(i * 0.7, 0.09, 0);
     g.add(runner);
   }
+
+  for(let i = 0; i < 3; i++){
+    const board = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.05, 0.2), wood);
+    board.position.set(0, 0.025, -0.6 + i * 0.6);
+    g.add(board);
+  }
+
   return g;
 }
 
