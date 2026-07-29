@@ -1,31 +1,32 @@
-import { SAVE_KEY } from '../core/constants.js';
-import { saveGame } from '../core/save.js';
+import { saveGame, clearAllSaves, setAutosaveEnabled } from '../core/save.js';
 
 let open = false;
 let helpOpen = false;
 
-export function isMenuOpen(){ return open; }
+export function isMenuOpen() {
+  return open;
+}
 
-export function setMenuOpen(value){
+export function setMenuOpen(value) {
   open = !!value;
   const el = document.getElementById('esc-menu');
-  if(!el) return;
+  if (!el) return;
   el.classList.toggle('open', open);
-  if(!open){
+  if (!open) {
     helpOpen = false;
     const help = document.getElementById('help-panel');
-    if(help) help.hidden = true;
+    if (help) help.hidden = true;
     const helpBtn = document.getElementById('btn-help');
-    if(helpBtn) helpBtn.setAttribute('aria-expanded', 'false');
+    if (helpBtn) helpBtn.setAttribute('aria-expanded', 'false');
   }
   document.body.classList.toggle('menu-open', open);
 }
 
-export function toggleMenu(){
+export function toggleMenu() {
   setMenuOpen(!open);
 }
 
-export function initMenu(){
+export function initMenu() {
   const helpBtn = document.getElementById('btn-help');
   const help = document.getElementById('help-panel');
   const craftPanel = document.getElementById('craft-panel');
@@ -40,8 +41,9 @@ export function initMenu(){
   };
 
   document.getElementById('btn-new').onclick = () => {
-    if(confirm('Start a brand new island? Your current save will be erased.')){
-      try { localStorage.removeItem(SAVE_KEY); } catch(e){}
+    if (confirm('Start a brand new island? Your current save will be erased.')) {
+      setAutosaveEnabled(false); // stop beforeunload from writing a save
+      clearAllSaves();
       location.reload();
     }
   };
