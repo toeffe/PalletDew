@@ -6,6 +6,7 @@ import { openSplitPanel } from './hotbar.js';
 import { renderInventoryPanel, isInventoryOpen } from './inventoryPanel.js';
 import { Mulli } from '../entities/Mulli.js';
 import { Player } from '../entities/player.js';
+import { getPowerSummary } from '../systems/power.js';
 
 export function updateUI(){
   document.getElementById('day').textContent = GameState.day;
@@ -44,17 +45,35 @@ export function updateUI(){
     mulliBar.innerHTML = `<span>🔋 Mulli</span><div id="mulli-charge-wrap"><div id="mulli-chargebar"></div></div>`;
     document.body.appendChild(mulliBar);
   }
-  if(Mulli && !Mulli.dead){
-    const near = Math.hypot(Mulli.x - Player.x, Mulli.z - Player.z) < 14;
-    if(Mulli.mounted || near){
-      mulliBar.style.display = 'flex';
-      document.getElementById('mulli-chargebar').style.width =
-        Math.round((Mulli.charge / Mulli.maxCharge) * 100) + '%';
-    } else {
-      mulliBar.style.display = 'none';
-    }
+  if(Mulli && !Mulli.dead && Mulli.mounted){
+    mulliBar.style.display = 'flex';
+    document.getElementById('mulli-chargebar').style.width =
+      Math.round((Mulli.charge / Mulli.maxCharge) * 100) + '%';
   } else {
     mulliBar.style.display = 'none';
+  }
+
+  let powerPanel = document.getElementById('power-panel');
+  if(!powerPanel){
+    powerPanel = document.createElement('div');
+    powerPanel.id = 'power-panel';
+    powerPanel.innerHTML = `
+      <div class="power-row"><span>☀️ Solar</span><span id="power-production">0/s</span></div>
+      <div class="power-row"><span>🔋 Stored</span><span id="power-stored">0/0</span></div>
+      <div id="power-battbar-wrap"><div id="power-battbar"></div></div>
+    `;
+    document.body.appendChild(powerPanel);
+  }
+  const summary = getPowerSummary(GameState.hour, GameState.minute, GameState.weather);
+  if(summary.hasGrid){
+    powerPanel.style.display = 'block';
+    document.getElementById('power-production').textContent = summary.production.toFixed(1) + '/s';
+    document.getElementById('power-stored').textContent =
+      Math.floor(summary.stored) + '/' + Math.floor(summary.capacity);
+    const ratio = summary.capacity > 0 ? summary.stored / summary.capacity : 0;
+    document.getElementById('power-battbar').style.width = Math.round(ratio * 100) + '%';
+  } else {
+    powerPanel.style.display = 'none';
   }
 
   const bar = document.getElementById('hotbar');

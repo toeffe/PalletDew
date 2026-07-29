@@ -142,6 +142,15 @@ body.inventory-open #hotbar { opacity: 0.35; }
 #mulli-charge-wrap { width:72px; height:8px; background:#2a1a0e; border:1px solid #8b6914; border-radius:4px; overflow:hidden; }
 #mulli-chargebar { height:100%; background:linear-gradient(90deg,#27ae60,#f1c40f); width:100%; }
 
+#power-panel {
+  display:none; position:absolute; top:86px; right:14px; width:150px;
+  background:rgba(20,12,6,0.9); border:1px solid #8b6914; border-radius:5px;
+  padding:8px 10px; color:#f4e4c1; font-size:11px; z-index:12; pointer-events:none;
+}
+.power-row { display:flex; justify-content:space-between; margin-bottom:4px; }
+#power-battbar-wrap { width:100%; height:8px; background:#2a1a0e; border:1px solid #8b6914; border-radius:4px; overflow:hidden; }
+#power-battbar { height:100%; background:linear-gradient(90deg,#27ae60,#f1c40f); width:0%; }
+
 #loading { position:absolute; inset:0; background:#0a1128; z-index:100; display:flex; flex-direction:column;
   align-items:center; justify-content:center; color:#f4e4c1; font-size:16px; gap:14px; }
 .spinner { width:34px; height:34px; border:4px solid #5c4033; border-top-color:#ffd700; border-radius:50%; animation:spin 1s linear infinite; }

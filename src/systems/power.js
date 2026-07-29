@@ -260,6 +260,24 @@ export function tickPower(dt, hour, minute, weather, mulli){
   }
 }
 
+/**
+ * Snapshot of the whole power grid for HUD display.
+ * @param {number} hour
+ * @param {number} minute
+ * @param {string} weather
+ */
+export function getPowerSummary(hour, minute, weather){
+  const rate = daylightSolarRate(hour, minute, weather);
+  let panels = 0, batteries = 0, docks = 0;
+  let production = 0, stored = 0, capacity = 0;
+  for(const n of powerNodes.values()){
+    if(n.kind === 'solar_panel'){ panels++; production += n.outputRate * rate; }
+    else if(n.kind === 'battery'){ batteries++; stored += n.charge; capacity += n.maxCharge; }
+    else if(n.kind === 'charge_dock'){ docks++; }
+  }
+  return { panels, batteries, docks, production, stored, capacity, hasGrid: powerNodes.size > 0 };
+}
+
 export function serializePower(){
   return {
     powerNodes: Array.from(powerNodes.values()).map(n => ({

@@ -185,8 +185,9 @@ export function initInput(){
       }
     }
 
-    if(hoveredFarmTile){ useToolOnFarmTile(hoveredFarmTile); return; }
-
+    // Entities (Mulli, pallets, chests, power objects, cables, crops...) take priority
+    // over farm-tile tool use, since the terrain raycast underneath/behind an entity
+    // will otherwise register as a "hovered farm tile" and swallow the click.
     const hit = raycastEntity();
     if(hit?.cableId){
       disconnectCable(hit.cableId, true);
@@ -200,8 +201,13 @@ export function initInput(){
       const mx = ent.x ?? ent.position.x;
       const mz = ent.z ?? ent.position.z;
       const d2 = Math.hypot(mx-Player.x, mz-Player.z);
-      if(Math.min(dist, d2) < TILE*4 && !ent.dead) ent.interact(getSelectedItem());
+      if(Math.min(dist, d2) < TILE*4 && !ent.dead){
+        ent.interact(getSelectedItem());
+        return;
+      }
     }
+
+    if(hoveredFarmTile){ useToolOnFarmTile(hoveredFarmTile); return; }
   });
 }
 
